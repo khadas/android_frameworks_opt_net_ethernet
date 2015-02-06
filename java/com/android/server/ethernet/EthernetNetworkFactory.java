@@ -48,6 +48,7 @@ import com.android.server.net.BaseNetworkObserver;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 
 
 /**
@@ -90,11 +91,14 @@ class EthernetNetworkFactory {
 
     /** Product-dependent regular expression of interface names we track. */
     private static String mIfaceMatch = "";
+    private static String[] mUsbIfaceMatchs;
 
     /** To notify Ethernet status. */
     private final RemoteCallbackList<IEthernetServiceListener> mListeners;
 
     /** Data members. All accesses to these must be synchronized(this). */
+    private static ArrayList mIfaceStack;
+    private static String mIfaceUp = "";
     private static String mIface = "";
     private String mHwAddr;
     private static boolean mLinkUp;
@@ -104,6 +108,7 @@ class EthernetNetworkFactory {
     EthernetNetworkFactory(RemoteCallbackList<IEthernetServiceListener> listeners) {
         mNetworkInfo = new NetworkInfo(ConnectivityManager.TYPE_ETHERNET, 0, NETWORK_TYPE, "");
         mLinkProperties = new LinkProperties();
+        mIfaceStack = new ArrayList<String>();
         initNetworkCapabilities();
         mListeners = listeners;
     }
@@ -126,23 +131,39 @@ class EthernetNetworkFactory {
      * Called on link state changes or on startup.
      */
     private void updateInterfaceState(String iface, boolean up) {
-        if (!mIface.equals(iface)) {
+        if (!mIfaceStack.contains(iface)) {
             return;
         }
         Log.d(TAG, "updateInterface: " + iface + " link " + (up ? "up" : "down"));
-
-        synchronized(this) {
-            mLinkUp = up;
-            mNetworkInfo.setIsAvailable(up);
-            if (!up) {
-                // Tell the agent we're disconnected. It will call disconnect().
-                mNetworkInfo.setDetailedState(DetailedState.DISCONNECTED, null, mHwAddr);
+        if (up) {
+            setInterfaceCanUp(iface);
+        }
+        if (!mIface.equals(iface)) {
+            Log.v(TAG, "now mIface is " + mIface + "; Interface["+iface+"] State change, now status:"+up);
+            if (up) {
+                setInterfaceUp(iface);
+            }else{
+                if (!mIfaceUp.equals(iface)) {
+                    Log.v(TAG, "mIfaceUp is "+mIfaceUp + ", ignore " + iface +" down");
+                    return ;
+                }
             }
-            updateAgent();
-            // set our score lower than any network could go
-            // so we get dropped.  TODO - just unregister the factory
-            // when link goes down.
-            mFactory.setScoreFilter(up ? NETWORK_SCORE : -1);
+        }
+
+        {
+            synchronized(this) {
+                mLinkUp = up;
+                mNetworkInfo.setIsAvailable(up);
+                if (!up) {
+                    // Tell the agent we're disconnected. It will call disconnect().
+                    mNetworkInfo.setDetailedState(DetailedState.DISCONNECTED, null, mHwAddr);
+                }
+                updateAgent();
+                // set our score lower than any network could go
+                // so we get dropped.  TODO - just unregister the factory
+                // when link goes down.
+                mFactory.setScoreFilter(up ? NETWORK_SCORE : -1);
+            }
         }
     }
 
@@ -163,8 +184,18 @@ class EthernetNetworkFactory {
         }
     }
 
+    private void setInterfaceCanUp(String iface) {
+        Log.v(TAG, "setInterfaceCanUp "+iface);
+        try {
+            mNMService.setInterfaceUp(iface);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Error upping interface " + mIface + ": " + e);
+        }
+    }
+
     private void setInterfaceUp(String iface) {
         // Bring up the interface so we get link status indications.
+        Log.v(TAG, "setInterfaceUp "+iface);
         try {
             mNMService.setInterfaceUp(iface);
             String hwAddr = null;
@@ -180,9 +211,10 @@ class EthernetNetworkFactory {
                     setInterfaceInfoLocked(iface, config.getHardwareAddress());
                     mNetworkInfo.setIsAvailable(true);
                     mNetworkInfo.setExtraInfo(mHwAddr);
-                } else {
+                } else if(!mIface.equals(iface)){
                     Log.e(TAG, "Interface unexpectedly changed from " + iface + " to " + mIface);
-                    mNMService.setInterfaceDown(iface);
+                    mHwAddr = config.getHardwareAddress();
+                    mIface = iface;
                 }
             }
         } catch (RemoteException e) {
@@ -193,19 +225,53 @@ class EthernetNetworkFactory {
     private boolean maybeTrackInterface(String iface) {
         // If we don't already have an interface, and if this interface matches
         // our regex, start tracking it.
-        if (!iface.matches(mIfaceMatch) || isTrackingInterface())
-            return false;
+        boolean match = false;
+        for (String item : mUsbIfaceMatchs) {
+            if (iface.matches(item)) {
+                match = true;
+            }
+        }
+        if (!iface.matches(mIfaceMatch) || isTrackingInterface()) {
+            match = true;
+        }
 
+        if (!match) {
+            Log.v(TAG, "didn't find a match iface:"+ iface);
+            return false;
+        }
+        Log.v(TAG, "add interface[" +iface+"] to IfaceStack");
+        mIfaceStack.add(iface);
+        if (mIfaceStack.size() > 1) {
+            setInterfaceCanUp(iface);
+            return true;
+        }
         Log.d(TAG, "Started tracking interface " + iface);
         setInterfaceUp(iface);
         return true;
     }
 
     private void stopTrackingInterface(String iface) {
-        if (!iface.equals(mIface))
+        if (!mIfaceStack.contains(iface)) {
+            Log.v(TAG, "stopTrackingInterface, ignore iface:"+iface);
             return;
+        }
 
         Log.d(TAG, "Stopped tracking interface " + iface);
+
+        if ( mIfaceStack.size() > 1) {
+            int i = 0;
+            for (i = mIfaceStack.size()-1; i>=0; i--) {
+                String tmp = (String) mIfaceStack.get(i);
+                if (tmp.equals(iface))
+                    break;
+            }
+            mIfaceStack.remove(i);
+            if (mIfaceStack.size() > 0) {
+                mIface = (String) mIfaceStack.get(mIfaceStack.size() - 1);
+                return;
+            }
+        }
+
         // TODO: Unify this codepath with stop().
         synchronized (this) {
             NetworkUtils.stopDhcp(mIface);
@@ -288,6 +354,7 @@ class EthernetNetworkFactory {
                         mFactory.setScoreFilter(-1);
                         return;
                     }
+                    mIfaceUp = mIface;
                     linkProperties = dhcpResults.toLinkProperties(mIface);
                 }
                 if (config.getProxySettings() == ProxySettings.STATIC ||
@@ -354,7 +421,8 @@ class EthernetNetworkFactory {
         // Interface match regex.
         mIfaceMatch = context.getResources().getString(
                 com.android.internal.R.string.config_ethernet_iface_regex);
-
+        mUsbIfaceMatchs = context.getResources().getStringArray(
+                com.android.internal.R.array.config_usbethernet_iface_regexs);
         // Create and register our NetworkFactory.
         mFactory = new LocalNetworkFactory(NETWORK_TYPE, context, target.getLooper());
         mFactory.setCapabilityFilter(mNetworkCapabilities);
@@ -388,7 +456,7 @@ class EthernetNetworkFactory {
                         if (mNMService.getInterfaceConfig(iface).hasFlag("running")) {
                             updateInterfaceState(iface, true);
                         }
-                        break;
+                        //break;
                     }
                 }
             }
