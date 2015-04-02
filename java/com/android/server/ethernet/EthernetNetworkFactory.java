@@ -231,7 +231,7 @@ class EthernetNetworkFactory {
                 match = true;
             }
         }
-        if (!iface.matches(mIfaceMatch) || isTrackingInterface()) {
+        if (iface.matches(mIfaceMatch)){ // || isTrackingInterface()) {
             match = true;
         }
 
