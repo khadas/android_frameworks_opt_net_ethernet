@@ -19,15 +19,18 @@ package com.android.server.ethernet;
 import android.content.Context;
 import android.util.Log;
 import com.android.server.SystemService;
+import android.os.SystemProperties;
 
 public final class EthernetService extends SystemService {
 
     private static final String TAG = "EthernetService";
     final EthernetServiceImpl mImpl;
+    private boolean mDisableInstaboot = true;
 
     public EthernetService(Context context) {
         super(context);
         mImpl = new EthernetServiceImpl(context);
+        mDisableInstaboot = SystemProperties.getBoolean("config.disable_instaboot", true);
     }
 
     @Override
@@ -39,6 +42,10 @@ public final class EthernetService extends SystemService {
     @Override
     public void onBootPhase(int phase) {
         if (phase == SystemService.PHASE_SYSTEM_SERVICES_READY) {
+            if (mDisableInstaboot) {
+                mImpl.start();
+            }
+        }else if (phase == SystemService.PHASE_INSTABOOT_RESTORED) {
             mImpl.start();
         }
     }
