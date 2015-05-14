@@ -119,9 +119,15 @@ class EthernetNetworkFactory {
         }
 
         protected void startNetwork() {
+            Log.d(TAG, "startNetwork()");
             onRequestNetwork();
         }
         protected void stopNetwork() {
+            Log.d(TAG, "stopNetwork()");
+            if (mNetworkAgent == null) {
+                Log.d(TAG, "No NetworkAgent, try to stop DHCP");
+                NetworkUtils.stopDhcp(mIface);
+            }
         }
     }
 
