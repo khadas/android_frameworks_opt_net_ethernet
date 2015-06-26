@@ -42,7 +42,8 @@ public final class EthernetService extends SystemService {
     @Override
     public void onBootPhase(int phase) {
         if (phase == SystemService.PHASE_SYSTEM_SERVICES_READY) {
-            if (mDisableInstaboot) {
+            String detail = SystemProperties.get("persist.sys.instaboot.enable","disable");
+            if (mDisableInstaboot || detail.equals("disable")) {
                 mImpl.start();
             }
         }else if (phase == SystemService.PHASE_INSTABOOT_RESTORED) {
