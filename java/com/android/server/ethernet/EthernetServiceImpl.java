@@ -16,6 +16,9 @@
 
 package com.android.server.ethernet;
 
+import android.content.BroadcastReceiver;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.IEthernetManager;
@@ -87,6 +90,8 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
     public void start() {
         Log.i(TAG, "Starting Ethernet service");
+
+        registerForBroadcasts();
 
         HandlerThread handlerThread = new HandlerThread("EthernetServiceThread");
         handlerThread.start();
@@ -167,6 +172,25 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
         }
         enforceAccessPermission();
         mListeners.unregister(listener);
+    }
+
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (Intent.ACTION_SCREEN_ON.equals(action)) {
+                Log.d(TAG, "ACTION_SCREEN_ON");
+                mTracker.resetInterface();
+            } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                Log.d(TAG, "ACTION_SCREEN_OFF");
+            }
+        }
+    };
+    private void registerForBroadcasts() {
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(Intent.ACTION_SCREEN_ON);
+        intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        mContext.registerReceiver(mReceiver, intentFilter);
     }
 
     @Override

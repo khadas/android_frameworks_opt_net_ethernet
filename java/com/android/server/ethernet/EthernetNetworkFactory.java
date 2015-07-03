@@ -292,6 +292,11 @@ class EthernetNetworkFactory {
         }
     }
 
+    public void resetInterface() {
+        NetworkUtils.disableInterface(mIface);
+        NetworkUtils.enableInterface(mIface);
+    }
+
     private boolean setStaticIpAddress(StaticIpConfiguration staticConfig) {
         if (staticConfig.ipAddress != null &&
                 staticConfig.gateway != null &&
