@@ -345,6 +345,11 @@ class EthernetNetworkFactory {
                     }
                     linkProperties = config.getStaticIpConfiguration().toLinkProperties(mIface);
                 } else {
+                    try {
+                        mNMService.clearInterfaceAddresses(mIface);
+                    } catch(RemoteException|IllegalStateException e) {
+                        Log.e(TAG,"clearInterfaceAddresses failed");
+                    }
                     mNetworkInfo.setDetailedState(DetailedState.OBTAINING_IPADDR, null, mHwAddr);
 
                     DhcpResults dhcpResults = new DhcpResults();
