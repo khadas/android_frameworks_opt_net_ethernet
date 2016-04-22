@@ -91,13 +91,13 @@ class EthernetNetworkFactory {
 
     /** Product-dependent regular expression of interface names we track. */
     private static String mIfaceMatch = "";
-    private static String[] mUsbIfaceMatchs;
+    private static String[] mUsbIfaceMatchs = {"usbnet0", "usbeth0"};
 
     /** To notify Ethernet status. */
     private final RemoteCallbackList<IEthernetServiceListener> mListeners;
 
     /** Data members. All accesses to these must be synchronized(this). */
-    private static ArrayList mIfaceStack;
+    private static ArrayList mIfaceStack = new ArrayList<String>();
     private static String mIfaceUp = "";
     private static String mIface = "";
     private String mHwAddr;
@@ -108,7 +108,6 @@ class EthernetNetworkFactory {
     EthernetNetworkFactory(RemoteCallbackList<IEthernetServiceListener> listeners) {
         mNetworkInfo = new NetworkInfo(ConnectivityManager.TYPE_ETHERNET, 0, NETWORK_TYPE, "");
         mLinkProperties = new LinkProperties();
-        mIfaceStack = new ArrayList<String>();
         initNetworkCapabilities();
         mListeners = listeners;
     }
@@ -436,8 +435,7 @@ class EthernetNetworkFactory {
         // Interface match regex.
         mIfaceMatch = context.getResources().getString(
                 com.android.internal.R.string.config_ethernet_iface_regex);
-        mUsbIfaceMatchs = context.getResources().getStringArray(
-                com.android.internal.R.array.config_usbethernet_iface_regexs);
+
         // Create and register our NetworkFactory.
         mFactory = new LocalNetworkFactory(NETWORK_TYPE, context, target.getLooper());
         mFactory.setCapabilityFilter(mNetworkCapabilities);
