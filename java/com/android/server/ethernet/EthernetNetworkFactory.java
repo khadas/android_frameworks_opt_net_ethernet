@@ -198,21 +198,13 @@ class EthernetNetworkFactory {
                 if (!up) {
                     // Tell the agent we're disconnected. It will call disconnect().
                     mNetworkInfo.setDetailedState(DetailedState.DISCONNECTED, null, mHwAddr);
+                    sendEthernetStateChangedBroadcast(EthernetManager.ETHER_STATE_DISCONNECTED);
                 }
                 updateAgent();
                 // set our score lower than any network could go
                 // so we get dropped.  TODO - just unregister the factory
                 // when link goes down.
                 mFactory.setScoreFilter(up ? NETWORK_SCORE : -1);
-        synchronized(this) {
-            mLinkUp = up;
-            mNetworkInfo.setIsAvailable(up);
-            if (!up) {
-                // Tell the agent we're disconnected. It will call disconnect().
-                mNetworkInfo.setDetailedState(DetailedState.DISCONNECTED, null, mHwAddr);
-                sendEthernetStateChangedBroadcast(EthernetManager.ETHER_STATE_DISCONNECTED);
-              }
-            }
         }
     }
 
