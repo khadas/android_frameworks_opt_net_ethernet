@@ -82,7 +82,7 @@ import java.lang.Exception;
 class EthernetNetworkFactory {
     private static final String NETWORK_TYPE = "Ethernet";
     private static final String TAG = "EthernetNetworkFactory";
-    private static final int NETWORK_SCORE = 150;
+    private static final int NETWORK_SCORE = 70;
     private static final boolean DBG = true;
     private static final boolean VDBG = false;
 
