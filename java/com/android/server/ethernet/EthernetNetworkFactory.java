@@ -47,6 +47,7 @@ import android.os.Looper;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.SystemProperties;
 import android.text.TextUtils;
 import android.util.Log;
 import android.content.Intent;
@@ -95,6 +96,8 @@ class EthernetNetworkFactory {
     private static final String TAG = "EthernetNetworkFactory";
     private static final int NETWORK_SCORE = 70;
     private static final boolean DBG = true;
+    private static final String ETHMODE_MULTI = "multi";
+    private static final String ETHMODE_BRIDGE = "bridge";
 
     /** Tracks interface changes. Called from NetworkManagementService. */
     private InterfaceObserver mInterfaceObserver;
@@ -132,6 +135,10 @@ class EthernetNetworkFactory {
     public int mEthernetCurrentState = EthernetManager.ETHER_STATE_DISCONNECTED;
     private boolean mReconnecting;
     private IpAssignment mConnectMode;
+    private EthernetNetworkFactoryExt mEthernetNetworkFactoryExt;
+
+    /* Multi ethernet support by rockchips */
+    private static String ethMode = "normal";
 
     public String dumpEthCurrentState(int curState) {
         if (curState == EthernetManager.ETHER_STATE_DISCONNECTED)
@@ -176,6 +183,12 @@ class EthernetNetworkFactory {
         mLinkProperties = new LinkProperties();
         initNetworkCapabilities();
         mListeners = listeners;
+        ethMode = SystemProperties.get("persist.net.ethernet.mode", "normal");
+        if (!TextUtils.isEmpty(ethMode)) {
+            if (ethMode.equals(ETHMODE_MULTI)) {
+                mEthernetNetworkFactoryExt = new EthernetNetworkFactoryExt();
+            }
+        }
     }
 
     private class LocalNetworkFactory extends NetworkFactory {
@@ -291,18 +304,33 @@ class EthernetNetworkFactory {
         @Override
         public void interfaceLinkStateChanged(String iface, boolean up) {
             updateInterfaceState(iface, up);
+            if (!TextUtils.isEmpty(ethMode)) {
+                if (ethMode.equals(ETHMODE_MULTI)) {
+                    mEthernetNetworkFactoryExt.interfaceLinkStateChanged(iface, up);
+                }
+            }
         }
 
         @Override
         public void interfaceAdded(String iface) {
             Log.d(TAG, "interfaceAdded: " + iface);
             maybeTrackInterface(iface);
+            if (!TextUtils.isEmpty(ethMode)) {
+                if (ethMode.equals(ETHMODE_MULTI)) {
+                    mEthernetNetworkFactoryExt.interfaceAdded(iface);
+                }
+            }
         }
 
         @Override
         public void interfaceRemoved(String iface) {
             Log.d(TAG, "interfaceRemoved: " + iface);
             stopTrackingInterface(iface);
+            if (!TextUtils.isEmpty(ethMode)) {
+                if (ethMode.equals(ETHMODE_MULTI)) {
+                    mEthernetNetworkFactoryExt.interfaceRemoved(iface);
+                }
+            }
         }
     }
 
@@ -590,8 +618,20 @@ class EthernetNetworkFactory {
         mPppoeManager = (PppoeManager) context.getSystemService(Context.PPPOE_SERVICE);
 
         // Interface match regex.
-        mIfaceMatch = context.getResources().getString(
-                com.android.internal.R.string.config_ethernet_iface_regex);
+        if (!TextUtils.isEmpty(ethMode)) {
+            if (ethMode.equals(ETHMODE_MULTI)) {
+                mIfaceMatch = "eth0";
+            } else if (ethMode.equals(ETHMODE_BRIDGE)) {
+                mIfaceMatch = "br0";
+            } else {
+                mIfaceMatch = context.getResources().getString(
+                        com.android.internal.R.string.config_ethernet_iface_regex);
+            }
+        } else {
+            mIfaceMatch = context.getResources().getString(
+                    com.android.internal.R.string.config_ethernet_iface_regex);
+        }
+
         Log.d(TAG, "EthernetNetworkFactory start " + mIfaceMatch);
 
         // Create and register our NetworkFactory.
@@ -650,6 +690,12 @@ class EthernetNetworkFactory {
             }
         } catch (RemoteException|IllegalStateException e) {
             Log.e(TAG, "Could not get list of interfaces " + e);
+        }
+
+        if (!TextUtils.isEmpty(ethMode)) {
+            if (ethMode.equals(ETHMODE_MULTI)) {
+                mEthernetNetworkFactoryExt.start(context, mNMService);
+            }
         }
     }
 
