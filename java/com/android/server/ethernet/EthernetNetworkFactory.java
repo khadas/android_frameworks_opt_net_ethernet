@@ -271,6 +271,11 @@ class EthernetNetworkFactory {
     // first disconnect, then connect
     public void reconnect(String iface) {
         Log.d(TAG, "reconnect:");
+        int carrier = getEthernetCarrierState(mIface);
+        if(carrier == 0) {
+            Log.d(TAG, "reconnect: RJ45 no plugin no need reconnect");
+            return ;
+        }
         mReconnecting = true;
 
         if (iface == null)
