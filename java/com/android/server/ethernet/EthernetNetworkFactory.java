@@ -205,6 +205,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
         NetworkInterfaceState network = mTrackingInterfaces.get(iface);
         if (network != null) {
             network.setIpConfig(ipConfiguration);
+            network.reconnect();
         }
     }
 
@@ -524,6 +525,14 @@ public class EthernetNetworkFactory extends NetworkFactory {
                 mNetworkAgent = null;
             }
             clear();
+        }
+
+        void reconnect() {
+            updateLinkState(false);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
+            updateLinkState(true);
         }
 
         private void updateAgent() {
