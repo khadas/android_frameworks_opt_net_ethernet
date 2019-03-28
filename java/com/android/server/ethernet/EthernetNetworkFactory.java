@@ -530,7 +530,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
 
         @Override
         public String toString() {
-            return getClass().getSimpleName() + "{ "
+            String network = null;
+            try {
+                 network = getClass().getSimpleName() + "{ "
                     + "iface: " + name + ", "
                     + "up: " + mLinkUp + ", "
                     + "hwAddress: " + mHwAddress + ", "
@@ -539,6 +541,11 @@ public class EthernetNetworkFactory extends NetworkFactory {
                     + "ipClient: " + mIpClient + ","
                     + "linkProperties: " + mLinkProperties
                     + "}";
+            } catch (Exception e){
+              //Will use default(s) initialized above.
+               Log.e(TAG,"network.toString:Exception:"+e);
+            }
+            return network;
         }
     }
 
