@@ -109,7 +109,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
             return;
         }
 
-        if (--network.refCount == 1) {
+        if (--network.refCount == 0) {
             network.stop();
         }
     }
