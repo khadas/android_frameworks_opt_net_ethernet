@@ -416,7 +416,7 @@ public class EthernetNetworkFactory extends NetworkFactory {
                         .build();
             } else {
                 provisioningConfiguration = IpClient.buildProvisioningConfiguration()
-                        .withProvisioningTimeoutMs(0)
+                        //.withProvisioningTimeoutMs(0)
                         .build();
             }
 
