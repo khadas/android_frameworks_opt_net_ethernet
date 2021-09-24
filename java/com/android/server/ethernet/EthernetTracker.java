@@ -46,6 +46,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.net.module.util.NetdUtils;
 import com.android.server.net.BaseNetworkObserver;
+import com.android.server.ethernet.WifiSleepController; 
 
 import java.io.FileDescriptor;
 import java.net.InetAddress;
@@ -96,6 +97,7 @@ final class EthernetTracker {
     private final Handler mHandler;
     private final EthernetNetworkFactory mFactory;
     private final EthernetConfigStore mConfigStore;
+    private final WifiSleepController mWifiSleepController;
 
     private final RemoteCallbackList<IEthernetServiceListener> mListeners =
             new RemoteCallbackList<>();
@@ -140,6 +142,7 @@ final class EthernetTracker {
         NetworkCapabilities nc = createNetworkCapabilities(true /* clear default capabilities */);
         mFactory = new EthernetNetworkFactory(handler, context, nc);
         mFactory.register();
+	mWifiSleepController = new WifiSleepController(mContext);
     }
 
     void start() {
