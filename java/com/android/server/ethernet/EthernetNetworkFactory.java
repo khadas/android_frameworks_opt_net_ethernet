@@ -114,8 +114,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         if (++network.refCount == 1) {
-            network.start();
+            //network.start();
         }
+        Log.w(TAG, "rockchip: needNetworkFor, network.refCount = " +network.refCount);
     }
 
     @Override
@@ -127,8 +128,9 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         if (--network.refCount == 0) {
-            network.stop();
+            //network.stop();
         }
+        Log.w(TAG, "rockchip: releaseNetworkFor, network.refCount = " +network.refCount);
     }
 
     /**
