@@ -142,6 +142,17 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     }
 
     @Override
+    public boolean isInterfaceup(String iface) {
+        enforceAccessPermission();
+
+        if (mTracker.isRestrictedInterface(iface)) {
+            enforceUseRestrictedNetworksPermission();
+        }
+
+        return mTracker.isInterfaceup(iface);
+    }
+
+    @Override
     public String getIpAddress(String iface) {
         enforceAccessPermission();
 

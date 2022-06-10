@@ -79,6 +79,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
     private final Context mContext;
     private EthernetManager mEthernetManager;
 
+    private static boolean[] mIfaceStatus = new boolean[2];
+
     public static class ConfigurationException extends AndroidRuntimeException {
         public ConfigurationException(String msg) {
             super(msg);
@@ -209,12 +211,26 @@ public class EthernetNetworkFactory extends NetworkFactory {
             Log.d(TAG, "updateInterfaceLinkState, iface: " + ifaceName + ", up: " + up);
         }
 
+        if (ifaceName.equals("eth0"))
+            mIfaceStatus[0] = up;
+        if (ifaceName.equals("eth1"))
+            mIfaceStatus[1] = up;
+
         NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
         return iface.updateLinkState(up);
     }
 
     boolean hasInterface(String interfacName) {
         return mTrackingInterfaces.containsKey(interfacName);
+    }
+
+    boolean isInterfaceup(String interfacName) {
+        if (interfacName.equals("eth0"))
+            return mIfaceStatus[0];
+        else if (interfacName.equals("eth1"))
+            return mIfaceStatus[1];
+        else
+            return false;
     }
 
     String getIpAddress(String iface) {

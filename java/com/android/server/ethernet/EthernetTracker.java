@@ -183,6 +183,10 @@ final class EthernetTracker {
         return mFactory.hasInterface(iface);
     }
 
+    boolean isInterfaceup(String iface) {
+        return mFactory.isInterfaceup(iface);
+    }
+
     String getIpAddress(String iface) {
         return mFactory.getIpAddress(iface);
     }
