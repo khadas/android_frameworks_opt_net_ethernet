@@ -497,14 +497,8 @@ public class EthernetNetworkFactory extends NetworkFactory {
         }
 
         void setIpConfig(IpConfiguration ipConfig) {
-            if (Objects.equals(this.mIpConfig, ipConfig)) {
-                if (DBG) Log.d(TAG, "ipConfig have not changed,so ignore setIpConfig");
-                return;
-            }
             this.mIpConfig = ipConfig;
-            if (mNetworkAgent != null) {
-                restart();
-            }
+            restart();
         }
 
         boolean satisfied(NetworkCapabilities requestedCapabilities) {
